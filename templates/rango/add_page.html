@@ -1,15 +1,10 @@
-<!DOCTYPE html>
-
 {% extends 'rango/base.html' %}
 {% load staticfiles %}
 
-<title>
 {% block title_block %}
 	Add a Page
 {% endblock %}
-</title>
 
-<body>
 {% block body_block %}
 	<h1>Add a Page to {{ category.name }}</h1>
     <div>
@@ -28,5 +23,4 @@
         </form>
     </div>
 {% endblock %}
-</body>
 

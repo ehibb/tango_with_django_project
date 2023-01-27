@@ -1,8 +1,104 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import HttpResponse
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from rango.models import Category, Page
-from rango.forms import CategoryForm, PageForm
+from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
+
+def register(request):
+    #Boolean value telling template if registration was successful
+    registered = False
+    
+    #If HTTP POST we process form data:
+    if request.method == 'POST':
+        #Get info from raw form information
+        user_form = UserForm(request.POST)
+        profile_form = UserProfileForm(request.POST)
+        
+        #If both forms are valid
+        if user_form.is_valid() and profile_form.is_valid():
+            #Save user form data to database
+            user = user_form.save()
+            
+            #Hash password with set_password method and update user object
+            user.set_password(user.password)
+            user.save()
+            
+            #Dealing with UserProfile instance; set commit = False to delay saving model
+            #We must set user attributes
+            profile = profile_form.save(commit = False)
+            profile.user = user
+            
+            #Check for profile picture
+            if 'picture' in request.FILES:
+                profile.picture = request.FILES['picture']
+                
+            #Now save profile
+            profile.save()
+            
+            #Indicates registration was successful
+            registered = True
+            
+        else:
+            print(user_form.errors, profile_form.errors)
+        
+    else:
+        #If not HTTP post
+        #Render form using two (blank) ModelForm instances
+        user_form = UserForm()
+        profile_form = UserProfileForm()
+        
+    #Return template depending on context
+    return render(request, 'rango/register.html', context= {'user_form': user_form, 'profile_form': profile_form, 'registered': registered})
+
+def user_login(request):
+    #If request is HTTP POST, attempt to pull out relevant info
+    if request.method == 'POST':
+        #Get username and password from login form
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        #Django magic used to authenticate username/password, returning User object if it is
+        user = authenticate(username=username, password=password)
+        
+        #If we have a User object (details are correct)
+        if user:
+            #Check if active
+            if user.is_active:
+                #Log user in and redirect to homepage
+                login(request, user)
+                return redirect(reverse('rango:index'))
+            #If inactive
+            else:
+                return HttpResponse("Your Rango account is disabled.")
+                
+        #If details are bad        
+        else:
+            print(f"Invalid login details: {username}, {password}")
+            return HttpResponse("Invalid login details supplied.")
+    
+    #If not a HTTP POST, show login form
+    else:
+        #No need to use a context dictionary
+        return render(request, 'rango/login.html')
+
+
+#To ensure only those logged in can log out           
+@login_required
+def user_logout(request):
+    #Simply log out
+    logout(request)
+    #Take user back to homepage
+    return redirect(reverse('rango:index'))
+    
+
+
+    
+@login_required
+def restricted(request):
+    return render(request, 'rango/restricted.html')
+
 
 def index(request):
     #Query database for list of ALL categories currently stored
@@ -58,6 +154,7 @@ def show_category(request, category_name_slug):
     #Render response and return to client
     return render(request, 'rango/category.html', context=context_dict)
     
+@login_required
 def add_category(request):
     form = CategoryForm()
     
@@ -75,6 +172,7 @@ def add_category(request):
     
     return render(request, 'rango/add_category.html', {'form': form})
     
+@login_required    
 def add_page(request, category_name_slug):
     try:
         category = Category.objects.get(slug=category_name_slug)

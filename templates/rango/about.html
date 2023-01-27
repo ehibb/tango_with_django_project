@@ -1,15 +1,10 @@
-<!DOCTYPE html>
-
 {% extends 'rango/base.html' %}
 {% load staticfiles %}
 
-<title>
 {% block title_block %}
 	About Rango
 {% endblock %}
-</title>
 
-<body>
 {% block body_block %}
 	<h1>Rango says...</h1>
 	<div>
@@ -22,4 +17,3 @@
 		<img src="{{ MEDIA_URL }}cat.jpg" alt="Picture of a Cat" />
 	</div>
 {% endblock %}
-</body>
